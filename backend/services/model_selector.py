@@ -1,7 +1,12 @@
 import json
+import os
 from pathlib import Path
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "models.json"
+
+# When True, load from DB (set when DATABASE_URL is configured and DB is available)
+USE_DATABASE = bool(os.getenv("DATABASE_URL"))
+_db_models_cache: list[dict] | None = None
 
 TASK_TYPE_MAP = {
     "chat": ["chat", "completion", "function_calling"],
@@ -76,8 +81,17 @@ USE_CASE_SCENARIOS = [
 
 
 def load_models():
+    """Load models from JSON file (sync fallback). DB path is handled by async service layer."""
     with open(DATA_PATH, "r") as f:
         return json.load(f)
+
+
+async def load_models_from_db(session):
+    """Load models from PostgreSQL via repository."""
+    from database.repository import ModelRepository
+    repo = ModelRepository(session)
+    models = await repo.get_all(active_only=True)
+    return [m.to_dict() for m in models]
 
 
 def score_model(model, criteria):
@@ -96,7 +110,7 @@ def score_model(model, criteria):
         best_for_match = any(criteria.task_type.lower() in bf.lower() for bf in model["best_for"])
         if best_for_match:
             score += 20
-            explanations.append(f"Partially matches task type via best-for use cases")
+            explanations.append("Partially matches task type via best-for use cases")
         else:
             explanations.append(f"Does not match task type '{criteria.task_type}'")
             return 0, "Not suitable for this task type"

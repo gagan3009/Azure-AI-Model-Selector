@@ -6,6 +6,7 @@ import ModelComparison from './components/ModelComparison'
 import CostCalculator from './components/CostCalculator'
 import TokenCounter from './components/TokenCounter'
 import CodeSnippetGenerator from './components/CodeSnippetGenerator'
+import GovernanceDashboard from './components/GovernanceDashboard'
 import { getAzureStatus, getModels } from './services/api'
 
 function App() {
@@ -121,6 +122,10 @@ function App() {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5.854 4.146a.5.5 0 010 .708L3.207 7.5l2.647 2.646a.5.5 0 01-.708.708l-3-3a.5.5 0 010-.708l3-3a.5.5 0 01.708 0zm4.292 0a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-3 3a.5.5 0 01-.708-.708L12.793 7.5l-2.647-2.646a.5.5 0 010-.708z"/></svg>
               Code Snippets
             </button>
+            <button className={`tab ${activeTab === 'governance' ? 'active' : ''}`} onClick={() => setActiveTab('governance')}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a2 2 0 012 2v1h3a1 1 0 011 1v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5a1 1 0 011-1h3V3a2 2 0 012-2zm0 1a1 1 0 00-1 1v1h2V3a1 1 0 00-1-1zM4 7v1h8V7H4zm0 3v1h5v-1H4z"/></svg>
+              Governance
+            </button>
           </nav>
 
           {activeTab === 'recommend' && (
@@ -148,6 +153,9 @@ function App() {
           )}
           {activeTab === 'code' && (
             <CodeSnippetGenerator />
+          )}
+          {activeTab === 'governance' && (
+            <GovernanceDashboard />
           )}
         </main>
       </div>

@@ -163,6 +163,40 @@ def _check_memory() -> dict[str, Any]:
         }
 
 
+def _check_database() -> dict[str, Any]:
+    """Check PostgreSQL connectivity (only if DATABASE_URL is configured)."""
+    start = time.perf_counter()
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        return {
+            "status": "healthy",
+            "message": "Database not configured (using file-based storage)",
+            "duration_ms": _elapsed(start),
+        }
+    try:
+        import asyncio
+        from database.connection import engine
+        from sqlalchemy import text
+
+        async def _ping():
+            async with engine.connect() as conn:
+                result = await conn.execute(text("SELECT 1"))
+                return result.scalar_one()
+
+        asyncio.run(_ping())
+        return {
+            "status": "healthy",
+            "message": "PostgreSQL connection OK",
+            "duration_ms": _elapsed(start),
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "message": f"Database error: {str(e)[:100]}",
+            "duration_ms": _elapsed(start),
+        }
+
+
 def _elapsed(start: float) -> float:
     return round((time.perf_counter() - start) * 1000, 2)
 
@@ -178,15 +212,15 @@ def run_health_checks(app_start_time: float) -> dict[str, Any]:
 
     checks = {
         "model_catalog": _check_model_catalog(),
+        "database": _check_database(),
         "filesystem": _check_filesystem(),
         "azure_connectivity": _check_azure_connectivity(),
         "runtime": _check_memory(),
     }
 
     # Determine overall status
-    statuses = [c["status"] for c in checks.values()]
     critical_checks = ["model_catalog"]  # These make the app unhealthy
-    non_critical_checks = ["filesystem", "azure_connectivity", "runtime"]
+    non_critical_checks = ["filesystem", "azure_connectivity", "runtime", "database"]
 
     if any(checks[c]["status"] == "unhealthy" for c in critical_checks):
         overall = "unhealthy"
@@ -207,7 +241,7 @@ def run_health_checks(app_start_time: float) -> dict[str, Any]:
 
     result = {
         "status": overall,
-        "version": "2.0.0",
+        "version": "3.0.0",
         "uptime_seconds": round(time.time() - app_start_time, 1),
         "total_check_duration_ms": total_duration,
         "checks": checks,
