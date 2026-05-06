@@ -199,12 +199,25 @@ def run_health_checks(app_start_time: float) -> dict[str, Any]:
 
     total_duration = _elapsed(start)
 
+    # Add cache and circuit breaker stats
+    from services.cache import (
+        model_catalog_cache, recommendation_cache, cost_estimate_cache, azure_api_cache,
+    )
+    from services.azure_client import azure_client
+
     result = {
         "status": overall,
         "version": "2.0.0",
         "uptime_seconds": round(time.time() - app_start_time, 1),
         "total_check_duration_ms": total_duration,
         "checks": checks,
+        "cache": {
+            "model_catalog": model_catalog_cache.stats,
+            "recommendations": recommendation_cache.stats,
+            "cost_estimates": cost_estimate_cache.stats,
+            "azure_api": azure_api_cache.stats,
+        },
+        "circuit_breaker": azure_client.circuit_breaker.stats,
     }
 
     if overall != "healthy":
